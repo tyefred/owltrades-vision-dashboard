@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import OpenAI from "openai";
 
+// ✅ Cloudinary configuration
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
   api_key: process.env.CLOUDINARY_API_KEY!,
@@ -14,14 +15,17 @@ const openai = new OpenAI({
 
 export async function GET(req: NextRequest) {
   try {
+    // ✅ Fetch most recent screenshot from the configured folder
     const result = await cloudinary.search
       .expression(`folder:${process.env.CLOUDINARY_FOLDER} AND resource_type:image`)
       .sort_by("created_at", "desc")
       .max_results(1)
       .execute();
 
-    const image = result.resources[0].secure_url;
+    const image = result.resources[0]?.secure_url;
+    if (!image) throw new Error("No images found in Cloudinary folder.");
 
+    // ✅ Ask GPT-4o to analyze the image
     const chat = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -50,9 +54,10 @@ export async function GET(req: NextRequest) {
     });
 
     const summary = chat.choices[0].message.content;
-
     return Response.json({ image, summary });
+
   } catch (err: any) {
-    return Response.json({ error: err.message }, { status: 500 });
+    console.error("[API ERROR]", err);
+    return Response.json({ error: err.message || "Something went wrong" }, { status: 500 });
   }
 }
