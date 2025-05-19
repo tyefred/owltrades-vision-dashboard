@@ -36,7 +36,7 @@ export async function GET() {
         {
           role: "user",
           content: [
-            { type: "text", text: "You're a trading analyst. What's the next A+ setup?" },
+            { type: "text", text: "You're a professional scalper on NQ. What's the next A+ setup? Give me entry, take profit, and stop loss." },
             { type: "image_url", image_url: { url: imageUrl } },
           ],
         },
