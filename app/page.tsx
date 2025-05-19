@@ -1,41 +1,43 @@
-"use client";
-import { useEffect, useState } from "react";
+'use client';
+
+import { useEffect, useState } from 'react';
+import TradeStatePanel from '@/app/components/TradeStatePanel';
 
 export default function Home() {
-  const [imageUrl, setImageUrl] = useState("");
-  const [analysis, setAnalysis] = useState("");
-  const [timestamp, setTimestamp] = useState("");
-  const [uploadedAt, setUploadedAt] = useState("");
+  const [imageUrl, setImageUrl] = useState('');
+  const [analysis, setAnalysis] = useState('');
+  const [timestamp, setTimestamp] = useState('');
+  const [uploadedAt, setUploadedAt] = useState('');
   const [countdown, setCountdown] = useState(60);
   const [aiActive, setAiActive] = useState(true);
 
   const fetchAIStatus = async () => {
     try {
-      const res = await fetch("/api/ai-status");
+      const res = await fetch('/api/ai-status');
       const data = await res.json();
       setAiActive(data.is_active);
     } catch (err) {
-      console.error("Failed to fetch AI status:", err);
+      console.error('Failed to fetch AI status:', err);
     }
   };
 
   const toggleAI = async () => {
     try {
-      const res = await fetch("/api/ai-status", {
-        method: "POST",
+      const res = await fetch('/api/ai-status', {
+        method: 'POST',
         body: JSON.stringify({ is_active: !aiActive }),
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       });
       const data = await res.json();
       setAiActive(data.is_active);
     } catch (err) {
-      console.error("Failed to toggle AI status:", err);
+      console.error('Failed to toggle AI status:', err);
     }
   };
 
   const fetchData = async () => {
     try {
-      const res = await fetch("/api/analyze");
+      const res = await fetch('/api/analyze');
       const data = await res.json();
 
       if (data?.image) {
@@ -45,10 +47,10 @@ export default function Home() {
         setTimestamp(new Date().toLocaleTimeString());
         setCountdown(60);
       } else {
-        console.error("No image or summary returned:", data);
+        console.error('No image or summary returned:', data);
       }
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error('Fetch error:', err);
     }
   };
 
@@ -78,14 +80,15 @@ export default function Home() {
       <button
         onClick={toggleAI}
         className={`px-4 py-2 rounded text-white transition ${
-          aiActive ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+          aiActive ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
         }`}
       >
-        {aiActive ? "⏸️ Pause AI Analysis" : "▶️ Start AI Analysis"}
+        {aiActive ? '⏸️ Pause AI Analysis' : '▶️ Start AI Analysis'}
       </button>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-7xl w-full">
-        <div className="flex flex-col items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl w-full mt-6">
+        {/* Chart + Screenshot */}
+        <div className="col-span-1 flex flex-col items-center">
           {imageUrl && (
             <img
               key={imageUrl}
@@ -101,7 +104,8 @@ export default function Home() {
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+        {/* AI Analysis */}
+        <div className="col-span-1 bg-white rounded-lg shadow-md p-6 border border-gray-200">
           <div className="flex justify-between text-sm text-gray-500 mb-2">
             <span>🧠 GPT-4o Analysis</span>
             <span>Updated: {timestamp}</span>
@@ -109,6 +113,11 @@ export default function Home() {
           <div className="prose prose-sm max-w-none whitespace-pre-wrap text-gray-800">
             {analysis}
           </div>
+        </div>
+
+        {/* Trade Lifecycle Panel */}
+        <div className="col-span-1">
+          <TradeStatePanel />
         </div>
       </div>
     </main>

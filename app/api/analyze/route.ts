@@ -1,117 +1,93 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import OpenAI from "openai";
+import { NextResponse } from 'next/server';
+import { getLatestTrade, insertNewTrade, updateTrade } from '@/app/lib/tradeLifecycle';
 
-export const dynamic = "force-dynamic";
+// Placeholder logic for AI — replace with real detectors later
+function detectSetup(imageUrl: string) {
+  // This should call your Vision AI and detect an A+ setup
+  // For now, return a dummy response
+  return { isValid: imageUrl.includes('setup') }; // crude placeholder
+}
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function detectEntry(currentPrice: number, lastTrade: any) {
+  const entryPrice = lastTrade.entry_price ?? currentPrice;
+  const trigger = currentPrice > entryPrice + 5; // adjust this logic
+  return {
+    triggered: trigger,
+    price: currentPrice,
+    stopLoss: currentPrice - 20, // 20 ticks SL
+    target: currentPrice + 40,   // 40 ticks TP
+  };
+}
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function detectBreakeven(currentPrice: number, trade: any) {
+  return currentPrice >= (trade.entry_price ?? 0) + 30;
+}
 
-export async function GET() {
-  // 🧠 1. Check AI toggle first
-  const { data: settings, error: settingsError } = await supabase
-    .from("ai_settings")
-    .select("is_active")
-    .limit(1)
-    .single();
+function detectStopOrTarget(currentPrice: number, trade: any) {
+  if (currentPrice <= trade.stop_loss) return { reason: 'SL' };
+  if (currentPrice >= trade.target_price) return { reason: 'TP' };
+  return null;
+}
 
-  const aiEnabled = settings?.is_active ?? false;
-  console.log("AI Toggle Status:", aiEnabled);
-
-  // 📸 2. Get latest screenshot
-  const { data: latest, error: latestError } = await supabase
-    .from("uploaded_images")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
-
-  if (latestError || !latest?.url || !latest?.public_id) {
-    console.error("Screenshot fetch error:", latestError);
-    return NextResponse.json({ error: "No screenshot found" }, { status: 500 });
-  }
-
-  if (!aiEnabled) {
-    return NextResponse.json(
-      {
-        image: latest.url,
-        uploadedAt: latest.created_at,
-        summary: "⏸️ AI is paused. No analysis was run.",
-      },
-      {
-        headers: { "Cache-Control": "no-store" },
-      }
-    );
-  }
-
-  // 🔁 3. If already analyzed, return cached summary
-  const { data: existing } = await supabase
-    .from("analyzed_images")
-    .select("*")
-    .eq("public_id", latest.public_id)
-    .single();
-
-  if (existing) {
-    return NextResponse.json(
-      {
-        image: latest.url,
-        uploadedAt: latest.created_at,
-        summary: existing.summary,
-      },
-      {
-        headers: { "Cache-Control": "no-store" },
-      }
-    );
-  }
-
-  // 🤖 4. Run new GPT analysis
-  let summary = "No analysis.";
+export async function POST(req: Request) {
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: `
-You're a trading educator analyzing a live futures chart for educational purposes.
+    const { imageUrl, currentPrice, timestamp } = await req.json();
 
-1. Identify any A+ setups with direction, entry, stop, and target.
-2. If no setup, explain why.
-              `.trim(),
-            },
-            { type: "image_url", image_url: { url: latest.url } },
-          ],
-        },
-      ],
-    });
+    const latest = await getLatestTrade();
 
-    summary = completion.choices[0].message.content || "No response.";
-  } catch (err) {
-    console.error("OpenAI error:", err);
-  }
-
-  // 💾 5. Save result
-  await supabase.from("analyzed_images").upsert({
-    public_id: latest.public_id,
-    url: latest.url,
-    summary,
-  });
-
-  return NextResponse.json(
-    {
-      image: latest.url,
-      uploadedAt: latest.created_at,
-      summary,
-    },
-    {
-      headers: { "Cache-Control": "no-store" },
+    // 1. No trade exists or previous trade exited — check for new setup
+    if (!latest || (latest.exited && !latest.setup_detected)) {
+      const setup = detectSetup(imageUrl);
+      if (setup.isValid) {
+        await insertNewTrade({
+          setup_detected: true,
+          screenshot_url: imageUrl,
+          created_at: new Date(),
+        });
+        return NextResponse.json({ status: 'setup_detected', message: 'New A+ setup detected' });
+      }
+      return NextResponse.json({ status: 'watching', message: 'No setup yet' });
     }
-  );
+
+    // 2. Setup detected but not entered
+    if (latest.setup_detected && !latest.entry_triggered) {
+      const entry = detectEntry(currentPrice, latest);
+      if (entry.triggered) {
+        await updateTrade(latest.id, {
+          entry_triggered: true,
+          entry_price: entry.price,
+          entry_time: timestamp,
+          stop_loss: entry.stopLoss,
+          target_price: entry.target,
+        });
+        return NextResponse.json({ status: 'entry_triggered', message: 'Trade entry confirmed' });
+      }
+      return NextResponse.json({ status: 'setup_confirmed', message: 'Waiting for entry trigger' });
+    }
+
+    // 3. Trade active, manage it
+    if (latest.entry_triggered && !latest.exited) {
+      if (!latest.breakeven_reached && detectBreakeven(currentPrice, latest)) {
+        await updateTrade(latest.id, { breakeven_reached: true });
+        return NextResponse.json({ status: 'breakeven_reached', message: 'Breakeven status reached' });
+      }
+
+      const exit = detectStopOrTarget(currentPrice, latest);
+      if (exit) {
+        await updateTrade(latest.id, {
+          exited: true,
+          exit_reason: exit.reason,
+          exit_time: timestamp,
+        });
+        return NextResponse.json({ status: 'trade_closed', message: `Trade exited: ${exit.reason}` });
+      }
+
+      return NextResponse.json({ status: 'trade_active', message: 'Trade still active' });
+    }
+
+    return NextResponse.json({ status: 'idle', message: 'No changes made' });
+  } catch (error) {
+    console.error('Analyze route error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
 }
