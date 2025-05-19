@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
-export const dynamic = "force-dynamic"; // ⛔ prevent Vercel caching
+export const dynamic = "force-dynamic"; // ⛔ disables Vercel cache for API route
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -36,7 +36,19 @@ export async function GET() {
         {
           role: "user",
           content: [
-            { type: "text", text: "You're a professional scalper on NQ. What's the next A+ setup? Give me entry, take profit, and stop loss." },
+            {
+              type: "text",
+              text: `
+You are a trading educator analyzing a live futures chart for educational purposes only.
+
+1. If there is a high-probability A+ setup, describe it.
+2. Include direction (long/short), entry, stop, and target levels.
+3. If no clear setup is present, explain why.
+4. Do not repeat disclaimers. Stay focused on chart-based pattern recognition.
+
+Evaluate based only on this visual chart:
+              `.trim(),
+            },
             { type: "image_url", image_url: { url: imageUrl } },
           ],
         },
@@ -56,7 +68,7 @@ export async function GET() {
     },
     {
       headers: {
-        "Cache-Control": "no-store", // ⛔ prevent stale responses
+        "Cache-Control": "no-store",
       },
     }
   );
