@@ -5,6 +5,7 @@ export default function Home() {
   const [imageUrl, setImageUrl] = useState("");
   const [analysis, setAnalysis] = useState("Loading...");
   const [timestamp, setTimestamp] = useState("");
+  const [countdown, setCountdown] = useState(60);
 
   const fetchData = async () => {
     const res = await fetch("/api/analyze");
@@ -12,17 +13,30 @@ export default function Home() {
     setImageUrl(data.image);
     setAnalysis(data.summary);
     setTimestamp(new Date().toLocaleTimeString());
+    setCountdown(60); // reset countdown
   };
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60000);
-    return () => clearInterval(interval);
+
+    const fetchInterval = setInterval(fetchData, 60000); // every 60s
+    const countdownInterval = setInterval(() => {
+      setCountdown(prev => (prev > 0 ? prev - 1 : 60));
+    }, 1000);
+
+    return () => {
+      clearInterval(fetchInterval);
+      clearInterval(countdownInterval);
+    };
   }, []);
 
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center p-6 space-y-6">
       <h1 className="text-4xl font-bold text-blue-700 mb-4">🦉 OwlTrades Vision AI</h1>
+
+      <div className="text-sm text-gray-600 mb-2">
+        Next update in <span className="font-semibold">{countdown}s</span>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-7xl w-full">
         <div className="flex justify-center items-start">
