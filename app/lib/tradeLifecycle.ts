@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase'; // adjust path if needed
+// import { Database } from '@/types/supabase'; // removed for now
 
-const supabase = createClient<Database>(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
@@ -19,13 +19,13 @@ export const getLatestTrade = async () => {
   return data;
 };
 
-export const insertNewTrade = async (trade: Partial<Database['public']['Tables']['trade_lifecycle']['Insert']>) => {
+export const insertNewTrade = async (trade: any) => {
   const { data, error } = await supabase.from(TABLE).insert([trade]);
   if (error) throw error;
   return data;
 };
 
-export const updateTrade = async (id: string, updates: Partial<Database['public']['Tables']['trade_lifecycle']['Update']>) => {
+export const updateTrade = async (id: string, updates: any) => {
   const { data, error } = await supabase
     .from(TABLE)
     .update(updates)
