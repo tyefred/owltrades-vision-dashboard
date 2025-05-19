@@ -55,7 +55,8 @@ Trading plan:
     const content = response.choices[0].message.content;
     console.log('🔍 Raw Vision response:', content);
 
-    const json = JSON.parse(content ?? '');
+    const cleaned = content?.replace(/```json|```/g, '').trim();
+    const json = JSON.parse(cleaned ?? '');
     return {
       setupDetected: !!json.setupDetected,
       entryPrice: json.entryPrice ?? null,
