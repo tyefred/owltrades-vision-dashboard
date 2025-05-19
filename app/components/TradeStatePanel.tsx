@@ -20,7 +20,10 @@ type TradeLifecycle = {
 
 export default function TradeStatePanel() {
   const [trade, setTrade] = useState<TradeLifecycle | null>(null);
-  const supabase = createClientComponentClient();
+  const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
   useEffect(() => {
     const fetchLatest = async () => {
