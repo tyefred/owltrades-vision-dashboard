@@ -3,6 +3,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
+export const dynamic = "force-dynamic"; // ⛔ prevent Vercel caching
+
 const supabase = createClient(
   process.env.SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -11,7 +13,6 @@ const supabase = createClient(
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function GET() {
-  // Step 1: Get the latest screenshot from Supabase
   const { data, error } = await supabase
     .from("uploaded_images")
     .select("*")
@@ -20,14 +21,13 @@ export async function GET() {
     .single();
 
   if (error || !data?.url) {
-    console.error("No screenshot found:", error);
+    console.error("Supabase query error:", error);
     return NextResponse.json({ error: "No screenshot found" }, { status: 500 });
   }
 
   const imageUrl = data.url;
   const uploadedAt = data.created_at;
 
-  // Step 2: Run GPT-4 Vision on the image
   let summary = "No analysis.";
   try {
     const completion = await openai.chat.completions.create({
@@ -36,7 +36,7 @@ export async function GET() {
         {
           role: "user",
           content: [
-            { type: "text", text: "You're a professional scalper on NQ. What's the next A+ setup? Give me levels, entry, take profit and stop loss." },
+            { type: "text", text: "You're a trading analyst. What's the next A+ setup?" },
             { type: "image_url", image_url: { url: imageUrl } },
           ],
         },
@@ -48,9 +48,16 @@ export async function GET() {
     console.error("OpenAI error:", err);
   }
 
-  return NextResponse.json({
-    image: imageUrl,
-    uploadedAt,
-    summary,
-  });
+  return NextResponse.json(
+    {
+      image: imageUrl,
+      uploadedAt,
+      summary,
+    },
+    {
+      headers: {
+        "Cache-Control": "no-store", // ⛔ prevent stale responses
+      },
+    }
+  );
 }
