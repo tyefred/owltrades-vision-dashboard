@@ -11,8 +11,6 @@ export async function GET(req: NextRequest) {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     const table = process.env.SUPABASE_TABLE || "uploaded_images";
 
-    console.log("🔍 Fetching latest screenshot from Supabase...");
-
     const res = await fetch(`${supabaseUrl}/rest/v1/${table}?order=created_at.desc&limit=1`, {
       headers: {
         apikey: supabaseKey,
@@ -20,11 +18,10 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    console.log("📡 Supabase response status:", res.status);
     const data = await res.json();
-    console.log("📦 Supabase response data:", data);
-
     const image = data[0]?.url;
+    const uploadedAt = data[0]?.created_at;
+
     if (!image) throw new Error("No screenshot found in Supabase.");
 
     const chat = await openai.chat.completions.create({
@@ -55,7 +52,7 @@ export async function GET(req: NextRequest) {
     });
 
     const summary = chat.choices[0].message.content;
-    return Response.json({ image, summary });
+    return Response.json({ image, summary, uploadedAt });
 
   } catch (err: any) {
     console.error("[API ERROR]", err);

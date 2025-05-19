@@ -5,6 +5,7 @@ export default function Home() {
   const [imageUrl, setImageUrl] = useState("");
   const [analysis, setAnalysis] = useState("");
   const [timestamp, setTimestamp] = useState("");
+  const [uploadedAt, setUploadedAt] = useState("");
   const [countdown, setCountdown] = useState(60);
 
   const fetchData = async () => {
@@ -13,8 +14,9 @@ export default function Home() {
       const data = await res.json();
 
       if (data?.image) {
-        setImageUrl(data.image);
+        setImageUrl(`${data.image}?updated=${Date.now()}`); // 👈 force new image fetch
         setAnalysis(data.summary);
+        setUploadedAt(data.uploadedAt);
         setTimestamp(new Date().toLocaleTimeString());
         setCountdown(60);
       } else {
@@ -47,7 +49,7 @@ export default function Home() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-7xl w-full">
-        <div className="flex justify-center items-start">
+        <div className="flex flex-col items-center">
           {imageUrl && (
             <img
               key={imageUrl}
@@ -55,6 +57,11 @@ export default function Home() {
               alt="Chart Screenshot"
               className="rounded-lg shadow-xl border border-gray-300 max-w-full max-h-[500px] object-contain transition-opacity duration-300 opacity-0 animate-fade-in"
             />
+          )}
+          {uploadedAt && (
+            <p className="text-xs text-gray-500 mt-2 text-center">
+              Screenshot taken at: {new Date(uploadedAt).toLocaleTimeString()}
+            </p>
           )}
         </div>
 
