@@ -1,9 +1,8 @@
-// app/api/analyze/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
-export const dynamic = "force-dynamic"; // ⛔ disables Vercel cache for API route
+export const dynamic = "force-dynamic";
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -13,21 +12,63 @@ const supabase = createClient(
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function GET() {
-  const { data, error } = await supabase
+  // 🧠 1. Check AI toggle first
+  const { data: settings, error: settingsError } = await supabase
+    .from("ai_settings")
+    .select("is_active")
+    .limit(1)
+    .single();
+
+  const aiEnabled = settings?.is_active ?? false;
+  console.log("AI Toggle Status:", aiEnabled);
+
+  // 📸 2. Get latest screenshot
+  const { data: latest, error: latestError } = await supabase
     .from("uploaded_images")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
 
-  if (error || !data?.url) {
-    console.error("Supabase query error:", error);
+  if (latestError || !latest?.url || !latest?.public_id) {
+    console.error("Screenshot fetch error:", latestError);
     return NextResponse.json({ error: "No screenshot found" }, { status: 500 });
   }
 
-  const imageUrl = data.url;
-  const uploadedAt = data.created_at;
+  if (!aiEnabled) {
+    return NextResponse.json(
+      {
+        image: latest.url,
+        uploadedAt: latest.created_at,
+        summary: "⏸️ AI is paused. No analysis was run.",
+      },
+      {
+        headers: { "Cache-Control": "no-store" },
+      }
+    );
+  }
 
+  // 🔁 3. If already analyzed, return cached summary
+  const { data: existing } = await supabase
+    .from("analyzed_images")
+    .select("*")
+    .eq("public_id", latest.public_id)
+    .single();
+
+  if (existing) {
+    return NextResponse.json(
+      {
+        image: latest.url,
+        uploadedAt: latest.created_at,
+        summary: existing.summary,
+      },
+      {
+        headers: { "Cache-Control": "no-store" },
+      }
+    );
+  }
+
+  // 🤖 4. Run new GPT analysis
   let summary = "No analysis.";
   try {
     const completion = await openai.chat.completions.create({
@@ -39,17 +80,13 @@ export async function GET() {
             {
               type: "text",
               text: `
-You are a trading educator analyzing a live futures chart for educational purposes only.
+You're a trading educator analyzing a live futures chart for educational purposes.
 
-1. If there is a high-probability A+ setup, describe it.
-2. Include direction (long/short), entry, stop, and target levels.
-3. If no clear setup is present, explain why.
-4. Do not repeat disclaimers. Stay focused on chart-based pattern recognition.
-
-Evaluate based only on this visual chart:
+1. Identify any A+ setups with direction, entry, stop, and target.
+2. If no setup, explain why.
               `.trim(),
             },
-            { type: "image_url", image_url: { url: imageUrl } },
+            { type: "image_url", image_url: { url: latest.url } },
           ],
         },
       ],
@@ -60,16 +97,21 @@ Evaluate based only on this visual chart:
     console.error("OpenAI error:", err);
   }
 
+  // 💾 5. Save result
+  await supabase.from("analyzed_images").upsert({
+    public_id: latest.public_id,
+    url: latest.url,
+    summary,
+  });
+
   return NextResponse.json(
     {
-      image: imageUrl,
-      uploadedAt,
+      image: latest.url,
+      uploadedAt: latest.created_at,
       summary,
     },
     {
-      headers: {
-        "Cache-Control": "no-store",
-      },
+      headers: { "Cache-Control": "no-store" },
     }
   );
 }
