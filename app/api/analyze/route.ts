@@ -1,61 +1,56 @@
-import { NextRequest } from "next/server";
+// app/api/analyze/route.ts
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export async function GET(req: NextRequest) {
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export async function GET() {
+  // Step 1: Get the latest screenshot from Supabase
+  const { data, error } = await supabase
+    .from("screenshots")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !data?.url) {
+    console.error("No screenshot found:", error);
+    return NextResponse.json({ error: "No screenshot found" }, { status: 500 });
+  }
+
+  const imageUrl = data.url;
+  const uploadedAt = data.created_at;
+
+  // Step 2: Run GPT-4 Vision on the image
+  let summary = "No analysis.";
   try {
-    const supabaseUrl = process.env.SUPABASE_URL!;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const table = process.env.SUPABASE_TABLE || "uploaded_images";
-
-    const res = await fetch(`${supabaseUrl}/rest/v1/${table}?order=created_at.desc&limit=1`, {
-      headers: {
-        apikey: supabaseKey,
-        Authorization: `Bearer ${supabaseKey}`,
-      },
-    });
-
-    const data = await res.json();
-    const image = data[0]?.url;
-    const uploadedAt = data[0]?.created_at;
-
-    if (!image) throw new Error("No screenshot found in Supabase.");
-
-    const chat = await openai.chat.completions.create({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
-          role: "system",
-          content: "You are a professional scalper. Analyze this futures chart visually.",
-        },
-        {
           role: "user",
           content: [
-            {
-              type: "text",
-              text: `Here's a chart screenshot. What do you see?
-- What setup (if any) is forming?
-- What are you waiting for to confirm an A+ trade?
-- What's the current action: Watch, Enter, or Ignore?`,
-            },
-            {
-              type: "image_url",
-              image_url: { url: image, detail: "auto" },
-            },
+            { type: "text", text: "You're a trading analyst. What's the next A+ setup?" },
+            { type: "image_url", image_url: { url: imageUrl } },
           ],
         },
       ],
-      max_tokens: 300,
     });
 
-    const summary = chat.choices[0].message.content;
-    return Response.json({ image, summary, uploadedAt });
-
-  } catch (err: any) {
-    console.error("[API ERROR]", err);
-    return Response.json({ error: err.message || "Something went wrong" }, { status: 500 });
+    summary = completion.choices[0].message.content || "No response.";
+  } catch (err) {
+    console.error("OpenAI error:", err);
   }
+
+  return NextResponse.json({
+    image: imageUrl,
+    uploadedAt,
+    summary,
+  });
 }
