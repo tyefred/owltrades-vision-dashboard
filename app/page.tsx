@@ -3,25 +3,33 @@ import { useEffect, useState } from "react";
 
 export default function Home() {
   const [imageUrl, setImageUrl] = useState("");
-  const [analysis, setAnalysis] = useState("Loading...");
+  const [analysis, setAnalysis] = useState("");
   const [timestamp, setTimestamp] = useState("");
   const [countdown, setCountdown] = useState(60);
 
   const fetchData = async () => {
-    const res = await fetch("/api/analyze");
-    const data = await res.json();
-    setImageUrl(data.image);
-    setAnalysis(data.summary);
-    setTimestamp(new Date().toLocaleTimeString());
-    setCountdown(60); // reset countdown
+    try {
+      const res = await fetch("/api/analyze");
+      const data = await res.json();
+
+      if (data?.image) {
+        setImageUrl(data.image);
+        setAnalysis(data.summary);
+        setTimestamp(new Date().toLocaleTimeString());
+        setCountdown(60);
+      } else {
+        console.error("No image or summary returned:", data);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    }
   };
 
   useEffect(() => {
     fetchData();
-
-    const fetchInterval = setInterval(fetchData, 60000); // every 60s
+    const fetchInterval = setInterval(fetchData, 60000);
     const countdownInterval = setInterval(() => {
-      setCountdown(prev => (prev > 0 ? prev - 1 : 60));
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 60));
     }, 1000);
 
     return () => {
