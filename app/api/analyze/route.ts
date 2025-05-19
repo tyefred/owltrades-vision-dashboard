@@ -13,7 +13,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export async function GET() {
   // Step 1: Get the latest screenshot from Supabase
   const { data, error } = await supabase
-    .from("screenshots")
+    .from("uploaded_images")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(1)
