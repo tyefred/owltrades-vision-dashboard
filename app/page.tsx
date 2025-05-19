@@ -21,12 +21,29 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-3xl font-bold mb-6">📈 OwlTrades Vision AI</h1>
-      {imageUrl && <img src={imageUrl} alt="Chart" className="mb-4 border shadow-lg max-w-[90%]" />}
-      <div className="bg-white p-4 rounded shadow max-w-xl">
-        <p className="text-gray-600 mb-2">🧠 GPT-4o Analysis (Updated: {timestamp})</p>
-        <pre className="whitespace-pre-wrap text-sm">{analysis}</pre>
+    <main className="min-h-screen bg-gray-100 flex flex-col items-center p-6 space-y-6">
+      <h1 className="text-4xl font-bold text-blue-700 mb-4">🦉 OwlTrades Vision AI</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-7xl w-full">
+        <div className="flex justify-center items-start">
+          {imageUrl && (
+            <img
+              src={imageUrl}
+              alt="Chart Screenshot"
+              className="rounded-lg shadow-xl border border-gray-300 max-w-full max-h-[500px] object-contain"
+            />
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+          <div className="flex justify-between text-sm text-gray-500 mb-2">
+            <span>🧠 GPT-4o Analysis</span>
+            <span>Updated: {timestamp}</span>
+          </div>
+          <div className="prose prose-sm max-w-none whitespace-pre-wrap text-gray-800">
+            {analysis}
+          </div>
+        </div>
       </div>
     </main>
   );
