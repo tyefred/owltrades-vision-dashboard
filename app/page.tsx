@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import TradeStatePanel from '@/app/components/TradeStatePanel';
+import TradeStatePanel from './components/TradeStatePanel';
 
 export default function Home() {
   const [imageUrl, setImageUrl] = useState('');

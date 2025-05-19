@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getLatestTrade, insertNewTrade, updateTrade } from '@/app/lib/tradeLifecycle';
+import { getLatestTrade, insertNewTrade, updateTrade } from '../../lib/tradeLifecycle';
 
 // Placeholder logic for AI — replace with real detectors later
 function detectSetup(imageUrl: string) {
