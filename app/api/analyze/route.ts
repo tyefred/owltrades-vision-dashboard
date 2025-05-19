@@ -1,12 +1,5 @@
 import { NextRequest } from "next/server";
-import { v2 as cloudinary } from "cloudinary";
 import OpenAI from "openai";
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME!,
-  api_key: process.env.CLOUDINARY_API_KEY!,
-  api_secret: process.env.CLOUDINARY_API_SECRET!,
-});
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -14,17 +7,20 @@ const openai = new OpenAI({
 
 export async function GET(req: NextRequest) {
   try {
-    const result = await cloudinary.search
-      .expression(`folder:${process.env.CLOUDINARY_FOLDER} AND resource_type:image`)
-      .sort_by("public_id", "desc")
-      .max_results(1)
-      .execute();
+    const supabaseUrl = process.env.SUPABASE_URL!;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const table = process.env.SUPABASE_TABLE || "uploaded_images";
 
-    const image = result.resources[0]?.secure_url;
+    const res = await fetch(`${supabaseUrl}/rest/v1/${table}?order=created_at.desc&limit=1`, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      }
+    });
 
-    if (!image) throw new Error("No image found in Cloudinary folder.");
-
-    console.log("[Cloudinary] Latest image fetched:", image);
+    const data = await res.json();
+    const image = data[0]?.url;
+    if (!image) throw new Error("No screenshot found in Supabase.");
 
     const chat = await openai.chat.completions.create({
       model: "gpt-4o",
