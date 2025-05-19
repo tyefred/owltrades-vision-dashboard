@@ -7,6 +7,31 @@ export default function Home() {
   const [timestamp, setTimestamp] = useState("");
   const [uploadedAt, setUploadedAt] = useState("");
   const [countdown, setCountdown] = useState(60);
+  const [aiActive, setAiActive] = useState(true);
+
+  const fetchAIStatus = async () => {
+    try {
+      const res = await fetch("/api/ai-status");
+      const data = await res.json();
+      setAiActive(data.is_active);
+    } catch (err) {
+      console.error("Failed to fetch AI status:", err);
+    }
+  };
+
+  const toggleAI = async () => {
+    try {
+      const res = await fetch("/api/ai-status", {
+        method: "POST",
+        body: JSON.stringify({ is_active: !aiActive }),
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      setAiActive(data.is_active);
+    } catch (err) {
+      console.error("Failed to toggle AI status:", err);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -14,7 +39,7 @@ export default function Home() {
       const data = await res.json();
 
       if (data?.image) {
-        setImageUrl(`${data.image}?updated=${Date.now()}`); // 👈 force new image fetch
+        setImageUrl(`${data.image}?updated=${Date.now()}`);
         setAnalysis(data.summary);
         setUploadedAt(data.uploadedAt);
         setTimestamp(new Date().toLocaleTimeString());
@@ -28,7 +53,9 @@ export default function Home() {
   };
 
   useEffect(() => {
+    fetchAIStatus();
     fetchData();
+
     const fetchInterval = setInterval(fetchData, 60000);
     const countdownInterval = setInterval(() => {
       setCountdown((prev) => (prev > 0 ? prev - 1 : 60));
@@ -47,6 +74,15 @@ export default function Home() {
       <div className="text-sm text-gray-600 mb-2">
         Next update in <span className="font-semibold">{countdown}s</span>
       </div>
+
+      <button
+        onClick={toggleAI}
+        className={`px-4 py-2 rounded text-white transition ${
+          aiActive ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+        }`}
+      >
+        {aiActive ? "⏸️ Pause AI Analysis" : "▶️ Start AI Analysis"}
+      </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-7xl w-full">
         <div className="flex flex-col items-center">
