@@ -36,23 +36,31 @@ export default function Home() {
   };
 
   const fetchData = async () => {
-    try {
-      const res = await fetch('/api/analyze');
-      const data = await res.json();
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        imageUrl: "",          // optional: use current image
+        currentPrice: 0,       // set dynamically later
+        timestamp: new Date().toISOString(),
+      }),
+    });
+    const data = await res.json();
 
-      if (data?.image) {
-        setImageUrl(`${data.image}?updated=${Date.now()}`);
-        setAnalysis(data.summary);
-        setUploadedAt(data.uploadedAt);
-        setTimestamp(new Date().toLocaleTimeString());
-        setCountdown(60);
-      } else {
-        console.error('No image or summary returned:', data);
-      }
-    } catch (err) {
-      console.error('Fetch error:', err);
+    if (data?.image) {
+      setImageUrl(`${data.image}?updated=${Date.now()}`);
+      setAnalysis(data.summary);
+      setUploadedAt(data.uploadedAt);
+      setTimestamp(new Date().toLocaleTimeString());
+      setCountdown(60);
+    } else {
+      console.error("No image or summary returned:", data);
     }
-  };
+  } catch (err) {
+    console.error("Fetch error:", err);
+  }
+};
 
   useEffect(() => {
     fetchAIStatus();
