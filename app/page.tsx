@@ -42,7 +42,7 @@ export default function Home() {
         <div className="flex justify-center items-start">
           {imageUrl && (
             <img
-              src={`${imageUrl}?t=${Date.now()}`}
+              src={imageUrl}
               alt="Chart Screenshot"
               className="rounded-lg shadow-xl border border-gray-300 max-w-full max-h-[500px] object-contain"
             />
