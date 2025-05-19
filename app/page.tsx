@@ -50,9 +50,10 @@ export default function Home() {
         <div className="flex justify-center items-start">
           {imageUrl && (
             <img
+              key={imageUrl}
               src={imageUrl}
               alt="Chart Screenshot"
-              className="rounded-lg shadow-xl border border-gray-300 max-w-full max-h-[500px] object-contain"
+              className="rounded-lg shadow-xl border border-gray-300 max-w-full max-h-[500px] object-contain transition-opacity duration-300 opacity-0 animate-fade-in"
             />
           )}
         </div>
