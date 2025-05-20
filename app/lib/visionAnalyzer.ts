@@ -6,6 +6,7 @@ const openai = new OpenAI({
 
 export type VisionAnalysisResult = {
   setupDetected: boolean;
+  direction: 'long' | 'short' | null;
   entryPrice: number | null;
   stopLoss: number | null;
   target: number | null;
@@ -14,23 +15,49 @@ export type VisionAnalysisResult = {
 
 export async function analyzeImage(imageUrl: string): Promise<VisionAnalysisResult> {
   const prompt = `
-You are a professional futures trader assistant. Visually analyze the chart and respond only in this strict JSON format:
+You are an elite futures trading assistant. Your job is to visually inspect the chart and detect either an A+ long OR A+ short setup.
+
+LONG CRITERIA:
+- Price is above the 9 and 21 EMA stack
+- Pullback to the 9 or 21 EMA
+- Breakout candle closes ABOVE the pullback high
+- Breakout occurs on increased volume
+- Structure is clean: flag or wedge preferred
+- Entry is the close of the breakout candle
+- Stop Loss is below the most recent swing low
+- Target is 2x the risk
+
+SHORT CRITERIA:
+- Price is below the 9 and 21 EMA stack
+- Pullback back up into the 9 or 21 EMA
+- Breakdown candle closes BELOW the pullback low
+- Breakdown occurs on increased volume
+- Structure is clean: bear flag or wedge preferred
+- Entry is the close of the breakdown candle
+- Stop Loss is above the most recent swing high
+- Target is 2x the risk
+
+RESPONSE FORMAT (return ONLY this JSON — no explanation, markdown, or wrapping):
 
 {
-  "setupDetected": true or false,
-  "entryPrice": number or null,
-  "stopLoss": number or null,
-  "target": number or null,
-  "summary": "brief explanation of what you see and why this is or isn’t an A+ setup"
+  "setupDetected": true,
+  "direction": "short",  // or "long"
+  "entryPrice": 21500.25,
+  "stopLoss": 21518.00,
+  "target": 21464.00,
+  "summary": "Bear flag into 21 EMA with breakdown candle on volume below swing low."
 }
 
-Trading plan:
-- Only confirm A+ setups that meet the following criteria:
-  - Clear trend direction (price above/below 9/21 EMA stack)
-  - Pullback to EMA or key level (PDH/ONH/VWAP)
-  - Bull/bear flag or tight consolidation
-  - Breakout candle on increased volume
-  - Avoid chop, ORB, or weak follow-through
+If no valid setup is present, respond with:
+
+{
+  "setupDetected": false,
+  "direction": null,
+  "entryPrice": null,
+  "stopLoss": null,
+  "target": null,
+  "summary": "No valid A+ setup detected."
+}
 `;
 
   try {
@@ -57,8 +84,10 @@ Trading plan:
 
     const cleaned = content?.replace(/```json|```/g, '').trim();
     const json = JSON.parse(cleaned ?? '');
+
     return {
       setupDetected: !!json.setupDetected,
+      direction: json.direction ?? null,
       entryPrice: json.entryPrice ?? null,
       stopLoss: json.stopLoss ?? null,
       target: json.target ?? null,
@@ -68,6 +97,7 @@ Trading plan:
     console.error('❌ Vision API Error:', err);
     return {
       setupDetected: false,
+      direction: null,
       entryPrice: null,
       stopLoss: null,
       target: null,
