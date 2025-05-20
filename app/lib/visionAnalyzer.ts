@@ -15,40 +15,49 @@ export type VisionAnalysisResult = {
 
 export async function analyzeImage(imageUrl: string): Promise<VisionAnalysisResult> {
   const prompt = `
-You are an elite futures trading assistant. Your job is to visually inspect the chart and detect either an A+ long OR A+ short setup.
+You are an elite futures trading assistant. Visually analyze the provided chart and return either a long or short A+ setup, or reject it.
 
-LONG CRITERIA:
-- Price is above the 9 and 21 EMA stack
-- Pullback to the 9 or 21 EMA
-- Breakout candle closes ABOVE the pullback high
-- Breakout occurs on increased volume
-- Structure is clean: flag or wedge preferred
-- Entry is the close of the breakout candle
-- Stop Loss is below the most recent swing low
-- Target is 2x the risk
+SETUP DETECTION LOGIC:
 
-SHORT CRITERIA:
-- Price is below the 9 and 21 EMA stack
-- Pullback back up into the 9 or 21 EMA
-- Breakdown candle closes BELOW the pullback low
-- Breakdown occurs on increased volume
-- Structure is clean: bear flag or wedge preferred
-- Entry is the close of the breakdown candle
-- Stop Loss is above the most recent swing high
-- Target is 2x the risk
+✅ LONG SETUP
+- Price is above both the 9 and 21 EMA
+- Pullback to 9 or 21 EMA
+- Breakout candle closes ABOVE prior pullback high
+- Breakout has increased volume
+- Flag or wedge structure preferred
+- Entry = close of breakout candle
+- Stop = Entry - (Tick Risk × 0.25)
+- Target = Entry + (2 × (Entry - Stop))
 
-RESPONSE FORMAT (return ONLY this JSON — no explanation, markdown, or wrapping):
+✅ SHORT SETUP
+- Price is below both the 9 and 21 EMA
+- Pullback to 9 or 21 EMA
+- Breakdown candle closes BELOW prior pullback low
+- Breakdown has increased volume
+- Bear flag or wedge preferred
+- Entry = close of breakdown candle
+- Stop = Entry + (Tick Risk × 0.25)
+- Target = Entry - (2 × (Stop - Entry))
+
+📌 TICK RISK:
+If the chart displays a “Tick Risk” value (top-right corner), use it.
+- Each tick = 0.25
+- Use Tick Risk × 0.25 to calculate stop distance
+- DO NOT use swing high/low if Tick Risk is visible
+
+📦 RESPONSE FORMAT:
+Return **ONLY** valid JSON — no markdown, no explanation:
 
 {
   "setupDetected": true,
-  "direction": "short",  // or "long"
+  "direction": "short",
   "entryPrice": 21500.25,
-  "stopLoss": 21518.00,
-  "target": 21464.00,
-  "summary": "Bear flag into 21 EMA with breakdown candle on volume below swing low."
+  "stopLoss": 21506.50,
+  "target": 21487.50,
+  "summary": "A+ short setup with Tick Risk 25 (6.25 pts). Breakdown below pullback with volume."
 }
 
-If no valid setup is present, respond with:
+If no valid setup is present:
 
 {
   "setupDetected": false,
@@ -56,7 +65,7 @@ If no valid setup is present, respond with:
   "entryPrice": null,
   "stopLoss": null,
   "target": null,
-  "summary": "No valid A+ setup detected."
+  "summary": "No A+ setup detected."
 }
 `;
 
@@ -66,7 +75,7 @@ If no valid setup is present, respond with:
       messages: [
         {
           role: 'system',
-          content: 'You are a precise trading setup detector.',
+          content: 'You are a precise trading setup detector. Only respond with strict JSON.',
         },
         {
           role: 'user',
