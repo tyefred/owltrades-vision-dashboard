@@ -64,19 +64,48 @@ export default function Home() {
 };
 
   useEffect(() => {
-    fetchAIStatus();
-    fetchData();
+  let lastSeenId: string | null = null;
 
-    const fetchInterval = setInterval(fetchData, 60000);
-    const countdownInterval = setInterval(() => {
-      setCountdown((prev) => (prev > 0 ? prev - 1 : 60));
-    }, 1000);
+  const checkForNewScreenshot = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/uploaded_images?select=id,url,created_at&order=created_at.desc&limit=1`, {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        },
+      });
+      const [latest] = await res.json();
+      if (!latest) return;
 
-    return () => {
-      clearInterval(fetchInterval);
-      clearInterval(countdownInterval);
-    };
-  }, []);
+      if (latest.id !== lastSeenId) {
+        lastSeenId = latest.id;
+
+        // New screenshot detected – run analysis
+        const analyze = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+
+        const data = await analyze.json();
+        if (data?.image) {
+          setImageUrl(`${data.image}?updated=${Date.now()}`);
+          setAnalysis(data.summary);
+          setUploadedAt(data.uploadedAt);
+          setTimestamp(new Date().toLocaleTimeString());
+          setCountdown(60);
+        } else {
+          console.warn('No image or summary returned from analysis');
+        }
+      }
+    } catch (err) {
+      console.error('Polling error:', err);
+    }
+  };
+
+  checkForNewScreenshot(); // run once immediately
+  const interval = setInterval(checkForNewScreenshot, 5000);
+  return () => clearInterval(interval);
+}, []);
 
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center p-6 space-y-6">
