@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 
 type TradeLifecycle = {
   id: string;
+  created_at: string;
   setup_detected: boolean;
   entry_triggered: boolean;
   entry_price: number | null;
