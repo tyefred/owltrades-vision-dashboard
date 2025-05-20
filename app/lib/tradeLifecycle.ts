@@ -29,11 +29,12 @@ export const insertNewTrade = async (trade: any) => {
 
 export const updateTrade = async (id: string, updates: any) => {
   const { data, error } = await supabase
-    .from(TABLE)
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
+  .from('trade_lifecycle')
+  .select('*')
+  .eq('exited', false)
+  .order('created_at', { ascending: false })
+  .limit(1);
+
+if (error) throw error;
+return data?.[0] || null;
 };
