@@ -10,11 +10,13 @@ const TABLE = 'trade_lifecycle';
 
 export const getLatestTrade = async () => {
   const { data, error } = await supabase
-    .from(TABLE)
+    .from('trade_lifecycle')
     .select('*')
+    .eq('exited', false) // ONLY get active trade
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
+
   if (error) throw error;
   return data;
 };
