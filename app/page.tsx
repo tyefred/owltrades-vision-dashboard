@@ -9,7 +9,6 @@ export default function Home() {
   const [analysis, setAnalysis] = useState('');
   const [timestamp, setTimestamp] = useState('');
   const [uploadedAt, setUploadedAt] = useState('');
-  const [countdown, setCountdown] = useState(60);
   const [aiActive, setAiActive] = useState(true);
 
   const fetchAIStatus = async () => {
@@ -54,7 +53,6 @@ export default function Home() {
       setAnalysis(data.summary);
       setUploadedAt(data.uploadedAt);
       setTimestamp(new Date().toLocaleTimeString());
-      setCountdown(60);
     } else {
       console.error("No image or summary returned:", data);
     }
@@ -99,7 +97,6 @@ export default function Home() {
           setAnalysis(data.summary);
           setUploadedAt(data.uploadedAt);
           setTimestamp(new Date().toLocaleTimeString());
-          setCountdown(60);
         } else {
           console.warn('No image or summary returned from analysis');
         }
@@ -118,10 +115,6 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center p-6 space-y-6">
       <h1 className="text-4xl font-bold text-blue-700 mb-4">🦉 OwlTrades Vision AI</h1>
-
-      <div className="text-sm text-gray-600 mb-2">
-        Next update in <span className="font-semibold">{countdown}s</span>
-      </div>
 
       <button
         onClick={toggleAI}
