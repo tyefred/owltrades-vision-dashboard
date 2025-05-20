@@ -46,7 +46,7 @@ export default function TradeLogPanel() {
 
   return (
     <div className="mt-8 w-full max-w-7xl">
-      <h2 className="text-lg font-bold text-zinc-200 mb-2">📜 Trade Log</h2>
+      <h2 className="text-lg font-bold text-black-100 mb-2">📜 Trade Log</h2>
       <div className="overflow-x-auto bg-zinc-900 border border-zinc-800 rounded-lg">
         <table className="min-w-full text-sm text-zinc-300">
           <thead className="bg-zinc-800 text-xs uppercase">
