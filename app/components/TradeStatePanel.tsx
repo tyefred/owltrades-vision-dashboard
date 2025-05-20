@@ -50,6 +50,12 @@ export default function TradeStatePanel() {
 
       <ul className="space-y-2 text-sm">
         <li>
+          <strong>Created:</strong>{' '}
+          {trade.created_at
+          ? new Date(trade.created_at).toLocaleTimeString()
+          : '—'}
+        </li>
+        <li>
           <strong>Setup:</strong>{' '}
           {trade.setup_detected ? '✅ Confirmed' : '⏳ Waiting'}
         </li>
