@@ -68,22 +68,29 @@ export default function Home() {
 
   const checkForNewScreenshot = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/uploaded_images?select=id,url,created_at&order=created_at.desc&limit=1`, {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/uploaded_images?select=id,url,created_at&order=created_at.desc&limit=1`,
+        {
+          headers: {
+            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+          },
+        }
+      );
+
       const [latest] = await res.json();
       if (!latest) return;
 
       if (latest.id !== lastSeenId) {
         lastSeenId = latest.id;
 
-        // New screenshot detected – run analysis
+        // Run analysis on exact screenshot
         const analyze = await fetch('/api/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
+          body: JSON.stringify({
+            imageUrl: latest.url,
+            uploadedAt: latest.created_at,
+          }),
         });
 
         const data = await analyze.json();
@@ -102,10 +109,11 @@ export default function Home() {
     }
   };
 
-  checkForNewScreenshot(); // run once immediately
+  checkForNewScreenshot(); // run once
   const interval = setInterval(checkForNewScreenshot, 5000);
   return () => clearInterval(interval);
 }, []);
+
 
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center p-6 space-y-6">

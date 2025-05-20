@@ -10,34 +10,23 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   try {
-    // Get the latest uploaded screenshot
-    const { data: imageData, error: imageError } = await supabase
-      .from('uploaded_images')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+    const { imageUrl, uploadedAt } = await req.json();
 
-    if (imageError || !imageData?.url) {
-      console.error('📷 Screenshot fetch error:', imageError);
-      return NextResponse.json(
-        { status: 'error', message: 'No uploaded image found.' },
-        { status: 500 }
-      );
+    if (!imageUrl) {
+      return NextResponse.json({ error: 'Missing image URL' }, { status: 400 });
     }
 
-    const imageUrl = imageData.url;
-    const uploadedAt = imageData.created_at;
-
-    // Run Vision AI on screenshot
     const result = await analyzeImage(imageUrl);
 
-    // Only proceed if there's a valid setup
-    if (result.setupDetected && result.entryPrice && result.stopLoss && result.target && result.direction) {
-      // Check if there's an active trade
+    if (
+      result.setupDetected &&
+      result.entryPrice &&
+      result.stopLoss &&
+      result.target &&
+      result.direction
+    ) {
       const active = await getLatestTrade();
       if (!active || active.exited) {
-        // Insert new trade
         await insertNewTrade({
           setup_detected: true,
           entry_triggered: false,
