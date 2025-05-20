@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import TradeStatePanel from './components/TradeStatePanel';
+import TradeLogPanel from './components/TradeLogPanel';
 
 export default function Home() {
   const [imageUrl, setImageUrl] = useState('');
@@ -128,6 +129,9 @@ export default function Home() {
           <TradeStatePanel />
         </div>
       </div>
+
+<TradeLogPanel />
+
     </main>
   );
 }
