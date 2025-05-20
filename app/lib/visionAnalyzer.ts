@@ -14,58 +14,40 @@ export type VisionAnalysisResult = {
 };
 
 export async function analyzeImage(imageUrl: string): Promise<VisionAnalysisResult> {
-  const prompt = `
-You are an elite futures trading assistant. Visually analyze the provided chart and return either a long or short A+ setup, or reject it.
+const prompt = `
+You are an elite futures trading assistant. Visually analyze the chart and return either a long or short A+ setup — or at minimum, any clean breakout/pullback structure.
 
-SETUP DETECTION LOGIC:
+CRITERIA FOR TRIGGERING SETUP (Loosened):
+- Price generally trending (not sideways chop)
+- EMAs should support the move, but minor overlap is allowed
+- Pullback and continuation structure is preferred, but not required to be perfect
+- Entry = breakout or breakdown candle close
+- Stop = Entry ± (Tick Risk × 0.25)
+- Target = 2x risk
 
-✅ LONG SETUP
-- Price is above both the 9 and 21 EMA
-- Pullback to 9 or 21 EMA
-- Breakout candle closes ABOVE prior pullback high
-- Breakout has increased volume
-- Flag or wedge structure preferred
-- Entry = close of breakout candle
-- Stop = Entry - (Tick Risk × 0.25)
-- Target = Entry + (2 × (Entry - Stop))
+If the chart shows "Tick Risk" (top-right), use it to determine stop size. Use:
+- Stop = Entry - (Tick Risk × 0.25) for long
+- Stop = Entry + (Tick Risk × 0.25) for short
+- Target = 2x risk distance
 
-✅ SHORT SETUP
-- Price is below both the 9 and 21 EMA
-- Pullback to 9 or 21 EMA
-- Breakdown candle closes BELOW prior pullback low
-- Breakdown has increased volume
-- Bear flag or wedge preferred
-- Entry = close of breakdown candle
-- Stop = Entry + (Tick Risk × 0.25)
-- Target = Entry - (2 × (Stop - Entry))
-
-📌 TICK RISK:
-If the chart displays a “Tick Risk” value (top-right corner), use it.
-- Each tick = 0.25
-- Use Tick Risk × 0.25 to calculate stop distance
-- DO NOT use swing high/low if Tick Risk is visible
-
-📦 RESPONSE FORMAT:
-Return **ONLY** valid JSON — no markdown, no explanation:
-
+RESPONSE FORMAT:
 {
   "setupDetected": true,
-  "direction": "short",
+  "direction": "long" | "short",
   "entryPrice": 21500.25,
-  "stopLoss": 21506.50,
-  "target": 21487.50,
-  "summary": "A+ short setup with Tick Risk 25 (6.25 pts). Breakdown below pullback with volume."
+  "stopLoss": 21493.75,
+  "target": 21513.75,
+  "summary": "Clean uptrend continuation. Tick Risk 25 used to size SL."
 }
 
-If no valid setup is present:
-
+If you see nothing usable, return:
 {
   "setupDetected": false,
   "direction": null,
   "entryPrice": null,
   "stopLoss": null,
   "target": null,
-  "summary": "No A+ setup detected."
+  "summary": "No valid setup."
 }
 `;
 
