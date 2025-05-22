@@ -6,26 +6,26 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const POLYGON_API_KEY = process.env.POLYGON_API_KEY!;
-const SYMBOL = 'CME:MNQ1'; // adjust if using a different symbol
-
 export async function GET(req: Request) {
-  // ✅ Authorization check for Vercel CRON
-  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Optional: cron protection
+  if (
+    process.env.CRON_SECRET &&
+    req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`
+  ) {
     console.warn('⛔ Unauthorized cron access attempt');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    // ✅ Get current price
-    const res = await fetch(`https://api.polygon.io/v2/last/trade/${SYMBOL}?apiKey=${POLYGON_API_KEY}`);
-    const data = await res.json();
-    const currentPrice = data?.results?.p;
+    // ✅ Fetch live price from Yahoo Finance (NQ Futures)
+    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/NQ=F');
+    const json = await res.json();
+    const currentPrice = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
 
-    if (!currentPrice) throw new Error('Could not fetch current price from Polygon');
+    if (!currentPrice) throw new Error('Unable to get price from Yahoo Finance');
 
-    // ✅ Get the active trade (not exited)
-    const { data: trades, error } = await supabase
+    // ✅ Get the active trade (if any)
+    const { data: trades } = await supabase
       .from('trade_lifecycle')
       .select('*')
       .eq('exited', false)
@@ -78,16 +78,13 @@ export async function GET(req: Request) {
     }
 
     if (Object.keys(updates).length > 0) {
-      await supabase
-        .from('trade_lifecycle')
-        .update(updates)
-        .eq('id', trade.id);
+      await supabase.from('trade_lifecycle').update(updates).eq('id', trade.id);
     }
 
     return NextResponse.json({
       status: 'updated',
       price: currentPrice,
-      applied: updates,
+      updates,
     });
   } catch (err) {
     console.error('❌ Price check error:', err);
