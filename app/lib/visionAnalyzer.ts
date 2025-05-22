@@ -21,26 +21,28 @@ SETUP DETECTION LOGIC:
 
 ✅ LONG SETUP
 - Price is above both the 9 and 21 EMA
+- 9 EMA is above the 21 EMA
 - Pullback to 9 or 21 EMA
 - Breakout candle closes ABOVE prior pullback high
 - Breakout has increased volume
 - Flag or wedge structure preferred
 - Entry = close of breakout candle
-- Stop = Entry - (Tick Risk × 0.25)
-- Target = Entry + (2 × (Entry - Stop))
+- Stop Loss = Entry - (Tick Risk × 0.25)
+- Target = Entry + (2 × Tick Risk × 0.25)
 
 ✅ SHORT SETUP
 - Price is below both the 9 and 21 EMA
+- 9 EMA is below the 21 EMA
 - Pullback to 9 or 21 EMA
 - Breakdown candle closes BELOW prior pullback low
 - Breakdown has increased volume
 - Bear flag or wedge preferred
 - Entry = close of breakdown candle
-- Stop = Entry + (Tick Risk × 0.25)
-- Target = Entry - (2 × (Stop - Entry))
+- Stop Loss = Entry + (Tick Risk × 0.25)
+- Target = Entry - (2 × Tick Risk × 0.25)
 
 📌 TICK RISK:
-If the chart displays a “Tick Risk” value (top-right corner), use it.
+If Tick Risk is present, apply it to both Stop Loss and Target using this exact formula. Do not override or modify it. Always reflect the same Tick Risk math on both sides of the trade.
 - Each tick = 0.25
 - Use Tick Risk × 0.25 to calculate stop distance
 - DO NOT use swing high/low if Tick Risk is visible
