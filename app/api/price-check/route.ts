@@ -1,8 +1,6 @@
-// app/api/price-check/route.ts
-
+import { NextResponse } from "next/server";
 import { getCurrentPriceFromDatabento } from "../../lib/data/databento/getCurrentPrice";
 import { getActiveTrade, updateTradeStatus } from "../../lib/data/trades";
-import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
@@ -10,8 +8,10 @@ export async function GET() {
 
     const price = await getCurrentPriceFromDatabento();
     if (!price) {
-      console.warn("[/api/price-check] No price returned.");
-      return NextResponse.json({ error: "Price unavailable" }, { status: 500 });
+      console.warn("[/api/price-check] No price available — likely outside market hours.");
+      return NextResponse.json({
+        message: "Market inactive — no recent tick data from Databento.",
+      });
     }
 
     console.log("[/api/price-check] Current price:", price);
@@ -22,21 +22,20 @@ export async function GET() {
       return NextResponse.json({ message: "No active trade" });
     }
 
-    const { entry, stop, target, id } = trade;
+    const { id, stop_loss: stop, target_price: target } = trade;
 
     if (price <= stop) {
-  console.log(`[STOP LOSS] Price ${price} hit stop at ${stop}`);
-  await updateTradeStatus(id, "SL");
-  return NextResponse.json({ message: "Trade stopped." });
-}
+      console.log(`[STOP LOSS] Price ${price} hit stop at ${stop}`);
+      await updateTradeStatus(id, "SL");
+      return NextResponse.json({ message: "Trade stopped." });
+    }
 
-if (price >= target) {
-  console.log(`[TARGET HIT] Price ${price} hit target at ${target}`);
-  await updateTradeStatus(id, "TP");
-  return NextResponse.json({ message: "Trade target hit." });
-}
+    if (price >= target) {
+      console.log(`[TARGET HIT] Price ${price} hit target at ${target}`);
+      await updateTradeStatus(id, "TP");
+      return NextResponse.json({ message: "Trade target hit." });
+    }
 
-    console.log("[/api/price-check] Price within bounds.");
     return NextResponse.json({ message: "Trade still active", price });
 
   } catch (err) {

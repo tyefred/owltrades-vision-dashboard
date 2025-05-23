@@ -1,5 +1,3 @@
-// lib/data/databento/getCurrentPrice.ts
-
 export async function getCurrentPriceFromDatabento(): Promise<number | null> {
   try {
     const res = await fetch(
@@ -17,9 +15,14 @@ export async function getCurrentPriceFromDatabento(): Promise<number | null> {
     }
 
     const json = await res.json();
-    const last = json?.[0]?.px;
+    console.log("[Databento] Raw response:", JSON.stringify(json, null, 2));
 
-    return last ? parseFloat(last) : null;
+    if (!Array.isArray(json) || json.length === 0 || !json[0]?.px) {
+      console.warn("No tick data — likely outside market hours.");
+      return null;
+    }
+
+    return parseFloat(json[0].px);
   } catch (err) {
     console.error("Failed to fetch price from Databento:", err);
     return null;
