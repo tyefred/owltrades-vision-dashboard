@@ -1,93 +1,46 @@
-import { createClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/server';
+// app/api/price-check/route.ts
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { getCurrentPriceFromDatabento } from "@/app/lib/data/databento/getCurrentPrice";
+import { getActiveTrade, updateTradeStatus } from "@/lib/data/trades";
+import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
-  // Optional: cron protection
-  if (
-    process.env.CRON_SECRET &&
-    req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`
-  ) {
-    console.warn('⛔ Unauthorized cron access attempt');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function GET() {
   try {
-    // ✅ Fetch live price from Yahoo Finance (NQ Futures)
-    const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/NQ=F');
-    const json = await res.json();
-    const currentPrice = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    console.log("[/api/price-check] Checking price...");
 
-    if (!currentPrice) throw new Error('Unable to get price from Yahoo Finance');
-
-    // ✅ Get the active trade (if any)
-    const { data: trades } = await supabase
-      .from('trade_lifecycle')
-      .select('*')
-      .eq('exited', false)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const trade = trades?.[0];
-    if (!trade) return NextResponse.json({ status: 'no-active-trade' });
-
-    const isLong = trade.direction === 'long';
-    const hasEntered = trade.entry_triggered;
-    const hasBreakeven = trade.breakeven_reached;
-
-    const shouldEnter = isLong
-      ? currentPrice >= trade.entry_price
-      : currentPrice <= trade.entry_price;
-
-    const shouldSL = isLong
-      ? currentPrice <= trade.stop_loss
-      : currentPrice >= trade.stop_loss;
-
-    const shouldTP = isLong
-      ? currentPrice >= trade.target_price
-      : currentPrice <= trade.target_price;
-
-    const updates: any = {};
-
-    if (!hasEntered && shouldEnter) {
-      updates.entry_triggered = true;
-      updates.entry_time = new Date().toISOString();
+    const price = await getCurrentPriceFromDatabento();
+    if (!price) {
+      console.warn("[/api/price-check] No price returned.");
+      return NextResponse.json({ error: "Price unavailable" }, { status: 500 });
     }
 
-    if (hasEntered && !hasBreakeven) {
-      const rrDistance = Math.abs(trade.entry_price - trade.stop_loss);
-      const breakevenPrice = isLong
-        ? trade.entry_price + rrDistance
-        : trade.entry_price - rrDistance;
+    console.log("[/api/price-check] Current price:", price);
 
-      const crossed = isLong
-        ? currentPrice >= breakevenPrice
-        : currentPrice <= breakevenPrice;
-
-      if (crossed) updates.breakeven_reached = true;
+    const trade = await getActiveTrade();
+    if (!trade) {
+      console.log("[/api/price-check] No active trade.");
+      return NextResponse.json({ message: "No active trade" });
     }
 
-    if (hasEntered && (shouldTP || shouldSL)) {
-      updates.exited = true;
-      updates.exit_time = new Date().toISOString();
-      updates.exit_reason = shouldTP ? 'TP' : 'SL';
+    const { entry, stop, target, id } = trade;
+
+    if (price <= stop) {
+      console.log(`[STOP LOSS] Price ${price} hit stop at ${stop}`);
+      await updateTradeStatus(id, "stopped");
+      return NextResponse.json({ message: "Trade stopped." });
     }
 
-    if (Object.keys(updates).length > 0) {
-      await supabase.from('trade_lifecycle').update(updates).eq('id', trade.id);
+    if (price >= target) {
+      console.log(`[TARGET HIT] Price ${price} hit target at ${target}`);
+      await updateTradeStatus(id, "target_hit");
+      return NextResponse.json({ message: "Trade target hit." });
     }
 
-    return NextResponse.json({
-      status: 'updated',
-      price: currentPrice,
-      updates,
-    });
+    console.log("[/api/price-check] Price within bounds.");
+    return NextResponse.json({ message: "Trade still active", price });
+
   } catch (err) {
-    console.error('❌ Price check error:', err);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("[/api/price-check] ERROR:", err);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
