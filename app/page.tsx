@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import TradeStatePanel from './components/TradeStatePanel';
 import TradeLogPanel from './components/TradeLogPanel';
+import { getActiveMNQSymbol } from './lib/data/databento/getActiveMNQSymbol';
 
 export default function Home() {
   const [imageUrl, setImageUrl] = useState('');
@@ -10,6 +11,7 @@ export default function Home() {
   const [timestamp, setTimestamp] = useState('');
   const [uploadedAt, setUploadedAt] = useState('');
   const [aiActive, setAiActive] = useState(true);
+  const [activeSymbol, setActiveSymbol] = useState('');
 
   const fetchAIStatus = async () => {
     try {
@@ -36,85 +38,87 @@ export default function Home() {
   };
 
   const fetchData = async () => {
-  try {
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        imageUrl: "",          // optional: use current image
-        currentPrice: 0,       // set dynamically later
-        timestamp: new Date().toISOString(),
-      }),
-    });
-    const data = await res.json();
-
-    if (data?.image) {
-      setImageUrl(`${data.image}?updated=${Date.now()}`);
-      setAnalysis(data.summary);
-      setUploadedAt(data.uploadedAt);
-      setTimestamp(new Date().toLocaleTimeString());
-    } else {
-      console.error("No image or summary returned:", data);
-    }
-  } catch (err) {
-    console.error("Fetch error:", err);
-  }
-};
-
-  useEffect(() => {
-  let lastSeenId: string | null = null;
-
-  const checkForNewScreenshot = async () => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/uploaded_images?select=id,url,created_at&order=created_at.desc&limit=1`,
-        {
-          headers: {
-            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-          },
-        }
-      );
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageUrl: "",
+          currentPrice: 0,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      const data = await res.json();
 
-      const [latest] = await res.json();
-      if (!latest) return;
-
-      if (latest.id !== lastSeenId) {
-        lastSeenId = latest.id;
-
-        // Run analysis on exact screenshot
-        const analyze = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            imageUrl: latest.url,
-            uploadedAt: latest.created_at,
-          }),
-        });
-
-        const data = await analyze.json();
-        if (data?.image) {
-          setImageUrl(`${data.image}?updated=${Date.now()}`);
-          setAnalysis(data.summary);
-          setUploadedAt(data.uploadedAt);
-          setTimestamp(new Date().toLocaleTimeString());
-        } else {
-          console.warn('No image or summary returned from analysis');
-        }
+      if (data?.image) {
+        setImageUrl(`${data.image}?updated=${Date.now()}`);
+        setAnalysis(data.summary);
+        setUploadedAt(data.uploadedAt);
+        setTimestamp(new Date().toLocaleTimeString());
+      } else {
+        console.error("No image or summary returned:", data);
       }
     } catch (err) {
-      console.error('Polling error:', err);
+      console.error("Fetch error:", err);
     }
   };
 
-  checkForNewScreenshot(); // run once
-  const interval = setInterval(checkForNewScreenshot, 5000);
-  return () => clearInterval(interval);
-}, []);
+  useEffect(() => {
+    let lastSeenId: string | null = null;
+    setActiveSymbol(getActiveMNQSymbol());
 
+    const checkForNewScreenshot = async () => {
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/uploaded_images?select=id,url,created_at&order=created_at.desc&limit=1`,
+          {
+            headers: {
+              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            },
+          }
+        );
+
+        const [latest] = await res.json();
+        if (!latest) return;
+
+        if (latest.id !== lastSeenId) {
+          lastSeenId = latest.id;
+
+          const analyze = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageUrl: latest.url,
+              uploadedAt: latest.created_at,
+            }),
+          });
+
+          const data = await analyze.json();
+          if (data?.image) {
+            setImageUrl(`${data.image}?updated=${Date.now()}`);
+            setAnalysis(data.summary);
+            setUploadedAt(data.uploadedAt);
+            setTimestamp(new Date().toLocaleTimeString());
+          } else {
+            console.warn('No image or summary returned from analysis');
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    };
+
+    checkForNewScreenshot();
+    const interval = setInterval(checkForNewScreenshot, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center p-6 space-y-6">
-      <h1 className="text-4xl font-bold text-blue-700 mb-4">🦉 OwlTrades Vision AI</h1>
+      <h1 className="text-4xl font-bold text-blue-700 mb-1">🦉 OwlTrades Vision AI</h1>
+      <p className="text-sm text-gray-500 mb-4">
+        Active Contract: <span className="font-mono text-black">{activeSymbol}</span>
+      </p>
 
       <button
         onClick={toggleAI}
@@ -126,7 +130,6 @@ export default function Home() {
       </button>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl w-full mt-6">
-        {/* Chart + Screenshot */}
         <div className="col-span-1 flex flex-col items-center">
           {imageUrl && (
             <img
@@ -143,7 +146,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* AI Analysis */}
         <div className="col-span-1 bg-white rounded-lg shadow-md p-6 border border-gray-200">
           <div className="flex justify-between text-sm text-gray-500 mb-2">
             <span>🧠 GPT-4o Analysis</span>
@@ -154,14 +156,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Trade Lifecycle Panel */}
         <div className="col-span-1">
           <TradeStatePanel />
         </div>
       </div>
 
-<TradeLogPanel />
-
+      <TradeLogPanel />
     </main>
   );
 }
