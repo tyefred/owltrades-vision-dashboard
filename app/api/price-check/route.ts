@@ -25,16 +25,16 @@ export async function GET() {
     const { entry, stop, target, id } = trade;
 
     if (price <= stop) {
-      console.log(`[STOP LOSS] Price ${price} hit stop at ${stop}`);
-      await updateTradeStatus(id, "stopped");
-      return NextResponse.json({ message: "Trade stopped." });
-    }
+  console.log(`[STOP LOSS] Price ${price} hit stop at ${stop}`);
+  await updateTradeStatus(id, "SL");
+  return NextResponse.json({ message: "Trade stopped." });
+}
 
-    if (price >= target) {
-      console.log(`[TARGET HIT] Price ${price} hit target at ${target}`);
-      await updateTradeStatus(id, "target_hit");
-      return NextResponse.json({ message: "Trade target hit." });
-    }
+if (price >= target) {
+  console.log(`[TARGET HIT] Price ${price} hit target at ${target}`);
+  await updateTradeStatus(id, "TP");
+  return NextResponse.json({ message: "Trade target hit." });
+}
 
     console.log("[/api/price-check] Price within bounds.");
     return NextResponse.json({ message: "Trade still active", price });
