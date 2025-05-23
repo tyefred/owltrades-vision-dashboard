@@ -1,7 +1,11 @@
+import { getActiveMNQSymbol } from "./getActiveMNQSymbol";
+
 export async function getCurrentPriceFromDatabento(): Promise<number | null> {
   try {
+    const symbol = getActiveMNQSymbol();
+
     const res = await fetch(
-      "https://live.databento.com/v0/last?dataset=GLBX.MDP3&symbols=MNQM5",
+      `https://live.databento.com/v0/last?dataset=GLBX.MDP3&symbols=${symbol}`,
       {
         headers: {
           "X-API-Key": process.env.DATABENTO_API_KEY!,
@@ -15,10 +19,10 @@ export async function getCurrentPriceFromDatabento(): Promise<number | null> {
     }
 
     const json = await res.json();
-    console.log("[Databento] Raw response:", JSON.stringify(json, null, 2));
+    console.log(`[Databento] Response for ${symbol}:`, JSON.stringify(json, null, 2));
 
     if (!Array.isArray(json) || json.length === 0 || !json[0]?.px) {
-      console.warn("No tick data — likely outside market hours.");
+      console.warn(`No tick data for symbol ${symbol}`);
       return null;
     }
 
