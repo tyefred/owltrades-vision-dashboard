@@ -7,7 +7,7 @@ export async function GET() {
   const redirectUri = encodeURIComponent("https://owltrades-vision-dashboard.vercel.app/api/auth/ninjatrader/callback");
   const scope = encodeURIComponent("marketdata");
 
-  const url = `https://api.ninjatrader.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
+  const url = `https://login.ninjatrader.com/oauth/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
 
   return NextResponse.redirect(url);
 }
