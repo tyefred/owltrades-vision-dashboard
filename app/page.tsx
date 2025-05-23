@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import TradeStatePanel from './components/TradeStatePanel';
 import TradeLogPanel from './components/TradeLogPanel';
 import { getActiveMNQSymbol } from './lib/data/databento/getActiveMNQSymbol';
+import { getCurrentPriceFromDatabento } from './lib/data/databento/getCurrentPrice';
 
 export default function Home() {
   const [imageUrl, setImageUrl] = useState('');
@@ -12,6 +13,7 @@ export default function Home() {
   const [uploadedAt, setUploadedAt] = useState('');
   const [aiActive, setAiActive] = useState(true);
   const [activeSymbol, setActiveSymbol] = useState('');
+  const [lastPrice, setLastPrice] = useState<number | null>(null);
 
   const fetchAIStatus = async () => {
     try {
@@ -67,6 +69,14 @@ export default function Home() {
     let lastSeenId: string | null = null;
     setActiveSymbol(getActiveMNQSymbol());
 
+    const fetchPrice = async () => {
+      const price = await getCurrentPriceFromDatabento();
+      setLastPrice(price);
+    };
+
+    fetchPrice();
+    const priceInterval = setInterval(fetchPrice, 15000); // update every 15s
+
     const checkForNewScreenshot = async () => {
       try {
         const res = await fetch(
@@ -110,7 +120,10 @@ export default function Home() {
 
     checkForNewScreenshot();
     const interval = setInterval(checkForNewScreenshot, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearInterval(priceInterval);
+    };
   }, []);
 
   return (
@@ -118,6 +131,11 @@ export default function Home() {
       <h1 className="text-4xl font-bold text-blue-700 mb-1">🦉 OwlTrades Vision AI</h1>
       <p className="text-sm text-gray-500 mb-4">
         Active Contract: <span className="font-mono text-black">{activeSymbol}</span>
+        {lastPrice !== null && (
+          <span className="text-gray-700 font-semibold ml-4">
+            Last Price: <span className="text-black font-mono">{lastPrice.toFixed(2)}</span>
+          </span>
+        )}
       </p>
 
       <button
