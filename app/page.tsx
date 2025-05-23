@@ -131,11 +131,12 @@ export default function Home() {
       <h1 className="text-4xl font-bold text-blue-700 mb-1">🦉 OwlTrades Vision AI</h1>
       <p className="text-sm text-gray-500 mb-4">
         Active Contract: <span className="font-mono text-black">{activeSymbol}</span>
-        {lastPrice !== null && (
-          <span className="text-gray-700 font-semibold ml-4">
-            Last Price: <span className="text-black font-mono">{lastPrice.toFixed(2)}</span>
+        <span className="text-gray-700 font-semibold ml-4">
+          Last Price:{' '}
+          <span className="text-black font-mono">
+            {lastPrice !== null ? lastPrice.toFixed(2) : '— (no recent tick)'}
           </span>
-        )}
+        </span>
       </p>
 
       <button
