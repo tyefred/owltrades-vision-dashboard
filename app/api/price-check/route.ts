@@ -1,7 +1,7 @@
 // app/api/price-check/route.ts
 
-import { getCurrentPriceFromDatabento } from "@/app/lib/data/databento/getCurrentPrice";
-import { getActiveTrade, updateTradeStatus } from "@/lib/data/trades";
+import { getCurrentPriceFromDatabento } from "../../lib/data/databento/getCurrentPrice";
+import { getActiveTrade, updateTradeStatus } from "../../lib/data/trades";
 import { NextResponse } from "next/server";
 
 export async function GET() {
