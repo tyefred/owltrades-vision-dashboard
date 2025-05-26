@@ -56,7 +56,7 @@ export default function Home() {
   useEffect(() => {
     let lastSeenId: string | null = null;
 
-    getActiveMNQSymbol().then(setActiveSymbol);
+    setActiveSymbol(getActiveMNQSymbol());
     fetchLastPrice();
     const priceInterval = setInterval(fetchLastPrice, 15000);
 
