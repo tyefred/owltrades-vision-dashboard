@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import TradeStatePanel from './components/TradeStatePanel';
 import TradeLogPanel from './components/TradeLogPanel';
 import { getActiveMNQSymbol } from './lib/data/databento/getActiveMNQSymbol';
+import { useLivePrice } from './hooks/useLivePrice'; // make sure this exists
 
 export default function Home() {
   const [imageUrl, setImageUrl] = useState('');
@@ -12,7 +13,8 @@ export default function Home() {
   const [uploadedAt, setUploadedAt] = useState('');
   const [aiActive, setAiActive] = useState(true);
   const [activeSymbol, setActiveSymbol] = useState('');
-  const [lastPrice, setLastPrice] = useState<number | null>(null);
+
+  const price = useLivePrice();
 
   const toggleAI = async () => {
     try {
@@ -28,23 +30,10 @@ export default function Home() {
     }
   };
 
-  const fetchLastPrice = async () => {
-    try {
-      const res = await fetch('/api/live-price');
-      const data = await res.json();
-      setLastPrice(data.price ?? null);
-    } catch (err) {
-      console.error('Failed to fetch price from internal API:', err);
-      setLastPrice(null);
-    }
-  };
-
   useEffect(() => {
     let lastSeenId: string | null = null;
 
     setActiveSymbol(getActiveMNQSymbol());
-    fetchLastPrice();
-    const priceInterval = setInterval(fetchLastPrice, 15000);
 
     const fetchAIStatus = async () => {
       try {
@@ -102,10 +91,7 @@ export default function Home() {
     checkForNewScreenshot();
     const interval = setInterval(checkForNewScreenshot, 5000);
 
-    return () => {
-      clearInterval(interval);
-      clearInterval(priceInterval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -116,7 +102,7 @@ export default function Home() {
         <span className="text-gray-700 font-semibold ml-4">
           Last Price:{' '}
           <span className="text-black font-mono">
-            {lastPrice !== null ? lastPrice.toFixed(2) : '— (no recent tick)'}
+            {price !== null ? price.toFixed(2) : '— (no recent tick)'}
           </span>
         </span>
       </p>
