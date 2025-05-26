@@ -11,7 +11,7 @@ function useLivePrice(symbol: string) {
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        const res = await fetch("https://live.databento.com/v0/last", {
+        const res = await fetch("https://api.databento.com/v0/last", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
