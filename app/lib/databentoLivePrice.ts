@@ -1,5 +1,5 @@
 // app/lib/databentoLivePrice.ts
-import { getActiveMNQSymbol } from "./getActiveMNQSymbol";
+import { getActiveMNQSymbol } from "./data/databento/getActiveMNQSymbol";
 
 let socket: WebSocket | null = null;
 let lastPrice: number | null = null;
