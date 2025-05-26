@@ -11,7 +11,7 @@ export async function GET() {
       body: JSON.stringify({
         dataset: "GLBX.MDP3",
         schema: "trades",
-        symbols: ["MNQ.c.0"],
+        symbols: ["MNQM5"],
       }),
     });
 
