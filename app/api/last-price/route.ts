@@ -1,4 +1,3 @@
-// app/api/last-price/route.ts
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -7,20 +6,26 @@ export async function GET() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-API-Key": process.env.DATABENTO_API_KEY!, // store this in .env.local
+        "X-API-Key": process.env.DATABENTO_API_KEY!,
       },
       body: JSON.stringify({
         dataset: "GLBX.MDP3",
         schema: "trades",
-        symbols: ["NQ.c.0"], // or whatever current contract works
+        symbols: ["MNQ.c.0"],
       }),
     });
 
     const data = await res.json();
+
+    console.log("Databento response:", data); // 🐛 Add this
     const px = data?.[0]?.px;
-    return NextResponse.json({ price: typeof px === "number" ? px : null });
+
+    return NextResponse.json({
+      price: typeof px === "number" ? px : null,
+      raw: data,
+    });
   } catch (err) {
     console.error("Databento fetch failed", err);
-    return NextResponse.json({ price: null, error: "Databento fetch failed" });
+    return NextResponse.json({ price: null, error: "Fetch failed" });
   }
 }
