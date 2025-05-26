@@ -52,6 +52,29 @@ export async function initLivePriceStream() {
   };
 }
 
-export function getLastPrice(): number | null {
-  return lastPrice;
+export async function getLastPrice(): Promise<number | null> {
+  const API_KEY = process.env.DATABENTO_API_KEY!;
+  const symbol = getActiveMNQSymbol(); // assuming this is still sync
+
+  try {
+    const res = await fetch("https://live.databento.com/v0/last", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": API_KEY,
+      },
+      body: JSON.stringify({
+        dataset: "GLBX.MDP3",
+        schema: "trades",
+        symbols: [symbol],
+      }),
+    });
+
+    const data = await res.json();
+    const px = data?.[0]?.px;
+    return typeof px === "number" ? px : null;
+  } catch (err) {
+    console.error("Databento REST fetch failed:", err);
+    return null;
+  }
 }

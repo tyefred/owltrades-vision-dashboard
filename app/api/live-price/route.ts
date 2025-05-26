@@ -1,9 +1,9 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
-import { initLivePriceStream, getLastPrice } from "../../lib/databentoLivePrice";
+import { getLastPrice } from "../../lib/databentoLivePrice";
 
 export async function GET() {
-  await initLivePriceStream();
-
-  const price = getLastPrice();
+  const price = await getLastPrice();
   return NextResponse.json({ price: price ?? null });
 }
