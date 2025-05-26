@@ -12,7 +12,7 @@ export async function GET() {
       body: JSON.stringify({
         dataset: "GLBX.MDP3",
         schema: "trades",
-        symbols: ["MNQ.c.0"], // or whatever current contract works
+        symbols: ["NQ.c.0"], // or whatever current contract works
       }),
     });
 
