@@ -1,6 +1,6 @@
 // app/api/live-price/route.ts
 import { NextResponse } from "next/server";
-import { initLivePriceStream, getLastPrice } from "@/app/lib/databentoLivePrice";
+import { initLivePriceStream, getLastPrice } from "@/lib/databentoLivePrice";
 
 export async function GET() {
   await initLivePriceStream();
