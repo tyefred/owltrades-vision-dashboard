@@ -4,8 +4,15 @@ import { NextResponse } from "next/server";
 import { getActiveMNQSymbol } from "../../lib/data/databento/getActiveMNQSymbol";
 
 export async function GET() {
-  const symbol = getActiveMNQSymbol();
-  const API_KEY = process.env.DATABENTO_API_KEY!;
+  const symbol = getActiveMNQSymbol(); // assumes this is synchronous
+  const API_KEY = process.env.DATABENTO_API_KEY;
+
+  if (!API_KEY || !symbol) {
+    return NextResponse.json(
+      { price: null, error: "Missing API key or symbol" },
+      { status: 400 }
+    );
+  }
 
   try {
     const res = await fetch("https://api.databento.com/v0/last", {
@@ -23,9 +30,10 @@ export async function GET() {
 
     const data = await res.json();
     const px = data?.[0]?.px;
+
     return NextResponse.json({ price: typeof px === "number" ? px : null });
   } catch (err) {
-    console.error("Databento server fetch failed:", err);
-    return NextResponse.json({ price: null, error: "Fetch failed" });
+    console.error("Databento fetch error:", err);
+    return NextResponse.json({ price: null, error: "Fetch failed" }, { status: 500 });
   }
 }
