@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
 export function useLivePrice() {
   const [price, setPrice] = useState<number | null>(null);
@@ -8,11 +8,11 @@ export function useLivePrice() {
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        const res = await fetch("/api/live-price");
+        const res = await fetch('/api/live-price');
         const data = await res.json();
         setPrice(data.price ?? null);
       } catch (err) {
-        console.error("Client fetch from internal API failed:", err);
+        console.error('Failed to fetch from /api/live-price:', err);
       }
     };
 
@@ -23,4 +23,3 @@ export function useLivePrice() {
 
   return price;
 }
-
