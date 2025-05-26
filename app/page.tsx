@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import TradeStatePanel from './components/TradeStatePanel';
 import TradeLogPanel from './components/TradeLogPanel';
 import { getActiveMNQSymbol } from './lib/data/databento/getActiveMNQSymbol';
-import { getCurrentPriceFromDatabento } from './lib/data/databento/getCurrentPrice';
 
 export default function Home() {
   const [imageUrl, setImageUrl] = useState('');
@@ -39,43 +38,27 @@ export default function Home() {
     }
   };
 
-  const fetchData = async () => {
+  const fetchLastPrice = async () => {
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageUrl: "",
-          currentPrice: 0,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-      const data = await res.json();
-
-      if (data?.image) {
-        setImageUrl(`${data.image}?updated=${Date.now()}`);
-        setAnalysis(data.summary);
-        setUploadedAt(data.uploadedAt);
-        setTimestamp(new Date().toLocaleTimeString());
-      } else {
-        console.error("No image or summary returned:", data);
+      const res = await fetch('/api/live-price');
+      if (res.status === 204) {
+        setLastPrice(null);
+        return;
       }
+      const data = await res.json();
+      setLastPrice(data.price);
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error('Failed to fetch live price:', err);
+      setLastPrice(null);
     }
   };
 
   useEffect(() => {
     let lastSeenId: string | null = null;
-    setActiveSymbol(getActiveMNQSymbol());
 
-    const fetchPrice = async () => {
-      const price = await getCurrentPriceFromDatabento();
-      setLastPrice(price);
-    };
-
-    fetchPrice();
-    const priceInterval = setInterval(fetchPrice, 15000); // update every 15s
+    getActiveMNQSymbol().then(setActiveSymbol);
+    fetchLastPrice();
+    const priceInterval = setInterval(fetchLastPrice, 15000);
 
     const checkForNewScreenshot = async () => {
       try {
@@ -120,6 +103,7 @@ export default function Home() {
 
     checkForNewScreenshot();
     const interval = setInterval(checkForNewScreenshot, 5000);
+
     return () => {
       clearInterval(interval);
       clearInterval(priceInterval);
